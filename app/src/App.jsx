@@ -13,6 +13,31 @@ export default function App() {
     const [currentEdge, setCurrentEdge] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
 
+    // For loading JSON graph data
+    const handleFileUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    // Check for valid data format
+                    if (data.nodes && data.edges) {
+                        setNodes(data.nodes);
+                        setEdges(data.edges);
+                        setMstEdges([]);
+                        setCurrentEdge(null);
+                    } else {
+                        alert("Invalid graph data.");
+                    }
+                } catch (error) {
+                    alert("Error parsing the file.");
+                }
+            };
+            reader.readAsText(file);
+        }
+    };
+
     const generateGraph = () => {
         const newNodes = generateNodes(7);
         const newEdges = generateEdges(newNodes, 8);
@@ -53,7 +78,6 @@ export default function App() {
         setIsRunning(false);
     };
 
-
     const toggleEditMode = () => {
         setIsEditing(!isEditing);
         setMstEdges([]);
@@ -84,6 +108,14 @@ export default function App() {
                         </button>
                     </>
                 )}
+
+                {/* File upload button */}
+                <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    style={{ marginTop: '20px' }}
+                />
             </div>
 
             {isEditing ? (
