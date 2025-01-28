@@ -6,6 +6,7 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
     const [isCreatingEdge, setIsCreatingEdge] = useState(false);
     const [viewport, setViewport] = useState({ x: 0, y: 0, width: 500, height: 400 });
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [draggingNode, setDraggingNode] = useState(null);
 
     useEffect(() => {
         if (nodes.length === 0) {
@@ -98,6 +99,21 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
         pt.y = e.clientY;
         const { x, y } = pt.matrixTransform(svg.getScreenCTM().inverse());
         setMousePos({ x, y });
+
+        if (draggingNode) {
+            const updatedNodes = nodes.map(node =>
+                node.id === draggingNode ? { ...node, x, y } : node
+            );
+            onNodesChange(updatedNodes);
+        }
+    };
+
+    const handleMouseDown = (nodeId) => {
+        setDraggingNode(nodeId);
+    };
+
+    const handleMouseUp = () => {
+        setDraggingNode(null);
     };
 
     const addEdge = () => {
@@ -122,7 +138,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
         setIsCreatingEdge(false);
     };
 
-    // Function to save the graph to a JSON file
     const saveGraphToFile = () => {
         const graphData = {
             nodes: nodes,
@@ -139,7 +154,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
         URL.revokeObjectURL(url);
     };
 
-    // Function to load a graph from a JSON file
     const loadGraphFromFile = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -212,7 +226,8 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                 onClick={handleCanvasClick}
                 onContextMenu={handleRightClick}
                 onMouseMove={handleMouseMove}
-                style={{ cursor: isCreatingEdge ? 'crosshair' : 'default' }}
+                onMouseUp={handleMouseUp}
+                style={{ cursor: isCreatingEdge ? 'crosshair' : draggingNode ? 'grabbing' : 'default' }}
             >
                 {edges.map(edge => {
                     const fromNode = nodes.find(n => n.id === edge.from);
@@ -257,6 +272,7 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                         key={node.id}
                         transform={`translate(${node.x},${node.y})`}
                         className="interactive-node"
+                        onMouseDown={() => handleMouseDown(node.id)}
                     >
                         <circle r="20" fill="#fff" stroke="#2196F3" strokeWidth="2" />
                         <text
