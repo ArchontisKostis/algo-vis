@@ -32,6 +32,8 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
     }, [nodes]);
 
     const handleCanvasClick = (e) => {
+        if (draggingNode) return; // Ignore clicks while dragging
+
         const svg = e.target.closest('svg');
         const pt = svg.createSVGPoint();
         pt.x = e.clientX;
@@ -62,6 +64,8 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
 
     const handleRightClick = (e) => {
         e.preventDefault();
+        if (draggingNode) return;
+
         const svg = e.target.closest('svg');
         const pt = svg.createSVGPoint();
         pt.x = e.clientX;
@@ -102,14 +106,16 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
 
         if (draggingNode) {
             const updatedNodes = nodes.map(node =>
-                node.id === draggingNode ? { ...node, x, y } : node
+                node.id === draggingNode.id
+                    ? { ...node, x, y }
+                    : node
             );
             onNodesChange(updatedNodes);
         }
     };
 
-    const handleMouseDown = (nodeId) => {
-        setDraggingNode(nodeId);
+    const handleMouseDown = (node) => {
+        setDraggingNode(node);
     };
 
     const handleMouseUp = () => {
@@ -139,10 +145,7 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
     };
 
     const saveGraphToFile = () => {
-        const graphData = {
-            nodes: nodes,
-            edges: edges
-        };
+        const graphData = { nodes, edges };
         const jsonData = JSON.stringify(graphData, null, 2);
 
         const blob = new Blob([jsonData], { type: 'application/json' });
@@ -210,12 +213,32 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                 <div className="mb-3">
                     <label htmlFor="load-graph-input">Load Graph</label>
                     <input
-                        className="form-control"
                         type="file"
+                        className="form-control"
                         accept=".json"
                         onChange={loadGraphFromFile}
                         id="load-graph-input"
                     />
+                </div>
+
+
+                <div className="alert alert-info alert-dismissible fade show" role="alert">
+                    <h6 className="alert-heading">
+                        <i className="bi bi-info-circle"> </i>How to use
+                    </h6>
+                    <hr />
+                    <ul style={{
+                        padding: "0 1em",
+                        margin: 0,
+                        textAlign: 'left'
+                    }}>
+                        <li>Click anywhere to create a node.</li>
+                        <li>Right-click a node to delete it.</li>
+                        <li>Click and drag a node to move it.</li>
+                        <li>Click "Add Edge" to connect two nodes.</li>
+                    </ul>
+
+                    <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             </div>
 
@@ -227,7 +250,7 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                 onContextMenu={handleRightClick}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
-                style={{ cursor: isCreatingEdge ? 'crosshair' : draggingNode ? 'grabbing' : 'default' }}
+                style={{ cursor: isCreatingEdge ? 'crosshair' : 'default' }}
             >
                 {edges.map(edge => {
                     const fromNode = nodes.find(n => n.id === edge.from);
@@ -272,7 +295,7 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                         key={node.id}
                         transform={`translate(${node.x},${node.y})`}
                         className="interactive-node"
-                        onMouseDown={() => handleMouseDown(node.id)}
+                        onMouseDown={() => handleMouseDown(node)}
                     >
                         <circle r="20" fill="#fff" stroke="#2196F3" strokeWidth="2" />
                         <text
