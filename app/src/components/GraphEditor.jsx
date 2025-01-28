@@ -44,15 +44,12 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
         if (clickedNode) {
             if (isCreatingEdge) {
                 if (!newEdge.from) {
-                    // Set the starting node for the edge
                     setNewEdge(prev => ({ ...prev, from: clickedNode.id }));
                 } else if (clickedNode.id !== newEdge.from) {
-                    // Set the destination node for the edge
                     setNewEdge(prev => ({ ...prev, to: clickedNode.id }));
                 }
             }
         } else {
-            // Add a new node at the clicked position
             const newNode = {
                 id: nodes.length + 1,
                 x: x,
@@ -62,7 +59,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
         }
     };
 
-
     const handleRightClick = (e) => {
         e.preventDefault();
         const svg = e.target.closest('svg');
@@ -71,7 +67,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
         pt.y = e.clientY;
         const { x, y } = pt.matrixTransform(svg.getScreenCTM().inverse());
 
-        // Check if an edge is clicked
         const clickedEdge = edges.find(edge => {
             const fromNode = nodes.find(n => n.id === edge.from);
             const toNode = nodes.find(n => n.id === edge.to);
@@ -89,7 +84,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
             return;
         }
 
-        // Check if a node is clicked
         const clickedNode = nodes.find(node => Math.hypot(node.x - x, node.y - y) < 20);
         if (clickedNode) {
             onNodesChange(nodes.filter(node => node.id !== clickedNode.id));
@@ -109,7 +103,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
     const addEdge = () => {
         if (newEdge.from === null || newEdge.to === null) return;
 
-        // Check for existing edge (in either direction)
         const edgeExists = edges.some(edge =>
             (edge.from === newEdge.from && edge.to === newEdge.to) ||
             (edge.from === newEdge.to && edge.to === newEdge.from)
@@ -125,11 +118,40 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
             onEdgesChange(newEdges);
         }
 
-        // Reset edge creation state
         setNewEdge({ from: null, to: null, weight: 1 });
         setIsCreatingEdge(false);
     };
 
+    // Function to save the graph to a JSON file
+    const saveGraphToFile = () => {
+        const graphData = {
+            nodes: nodes,
+            edges: edges
+        };
+        const jsonData = JSON.stringify(graphData, null, 2);
+
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'graph.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Function to load a graph from a JSON file
+    const loadGraphFromFile = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const loadedData = JSON.parse(reader.result);
+            onNodesChange(loadedData.nodes);
+            onEdgesChange(loadedData.edges);
+        };
+        reader.readAsText(file);
+    };
 
     return (
         <div className="editor-container">
@@ -168,6 +190,16 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                         </div>
                     </div>
                 )}
+
+                <button onClick={saveGraphToFile}>Save Graph</button>
+                <input
+                    type="file"
+                    accept=".json"
+                    onChange={loadGraphFromFile}
+                    style={{ display: 'none' }}
+                    id="load-graph-input"
+                />
+                <label htmlFor="load-graph-input">Load Graph</label>
             </div>
 
             <svg
@@ -179,7 +211,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                 onMouseMove={handleMouseMove}
                 style={{ cursor: isCreatingEdge ? 'crosshair' : 'default' }}
             >
-                {/* Existing edges */}
                 {edges.map(edge => {
                     const fromNode = nodes.find(n => n.id === edge.from);
                     const toNode = nodes.find(n => n.id === edge.to);
@@ -206,7 +237,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                     );
                 })}
 
-                {/* Preview edge */}
                 {isCreatingEdge && newEdge.from !== null && (
                     <line
                         x1={nodes.find(n => n.id === newEdge.from)?.x}
@@ -219,7 +249,6 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                     />
                 )}
 
-                {/* Nodes */}
                 {nodes.map(node => (
                     <g
                         key={node.id}
