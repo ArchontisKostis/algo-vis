@@ -41,7 +41,7 @@ export default function App() {
     const resetGraph = () => {
         const resetEdges = edges.map(edge => ({
             ...edge,
-            color: 'gray' // Reset edge color to default
+            color: '#ddd' // Reset edge color to default
         }));
         setEdges(resetEdges);
         setMstEdges([]);
@@ -190,7 +190,7 @@ export default function App() {
                                 type="file"
                                 accept=".json"
                                 onChange={handleFileUpload}
-                                style={{ marginTop: '20px' }}
+                                style={{marginTop: '20px'}}
                             />
                         </div>
                     </>
@@ -214,10 +214,10 @@ export default function App() {
             )}
 
             <div className="legend">
-                <div><span style={{ backgroundColor: '#FF5722' }}></span> Current Edge</div>
-                <div><span style={{ backgroundColor: '#4CAF50' }}></span> MST Edge</div>
-                <div><span style={{ backgroundColor: '#ddd' }}></span> Unprocessed Edge</div>
-                <div><span style={{ backgroundColor: '#666' }}></span> Excluded Edge (forms cycle)</div>
+                <div><span style={{backgroundColor: '#FF5722'}}></span> Current Edge</div>
+                <div><span style={{backgroundColor: '#4CAF50'}}></span> MST Edge</div>
+                <div><span style={{backgroundColor: '#ddd'}}></span> Unprocessed Edge</div>
+                <div><span style={{backgroundColor: '#666'}}></span> Excluded Edge (forms cycle)</div>
                 {isEditing && (
                     <div className="edit-instructions">
                         Click canvas to add nodes | Click nodes to create edges
@@ -237,6 +237,16 @@ export default function App() {
                     </ul>
                 </div>
             )}
+
+
+            <footer style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "0.5em",
+            }}>
+                <i className="bi bi-github"> </i> <a href="https://github.com/ArchontisKostis/algo-vis" rel="noreferrer" target="_blank"> Source Code</a>
+            </footer>
         </div>
     );
 }
