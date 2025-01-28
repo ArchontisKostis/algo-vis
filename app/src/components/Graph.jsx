@@ -18,6 +18,16 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
         return `${minX} ${minY} ${width} ${height}`;
     };
 
+    // Get all node IDs included in the MST
+    const mstNodeIds = new Set();
+    mstEdges.forEach(edge => {
+        mstNodeIds.add(edge.from);
+        mstNodeIds.add(edge.to);
+    });
+
+    // Get the IDs of nodes connected by the current edge
+    const currentNodeIds = currentEdge ? [currentEdge.from, currentEdge.to] : [];
+
     return (
         <div className="graph-container">
             <svg
@@ -26,6 +36,7 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
                 width="100%"
                 height="100%"
             >
+                {/* Render edges */}
                 {edges.map(edge => {
                     const from = getNodePosition(edge.from);
                     const to = getNodePosition(edge.to);
@@ -55,18 +66,32 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
                     );
                 })}
 
-                {nodes.map(node => (
-                    <g key={node.id} transform={`translate(${node.x},${node.y})`}>
-                        <circle r="20" fill="#fff" stroke="#2196F3" strokeWidth="2" />
-                        <text
-                            textAnchor="middle"
-                            dy=".3em"
-                            style={{ userSelect: 'none', fontWeight: 'bold' }}
-                        >
-                            {node.id}
-                        </text>
-                    </g>
-                ))}
+                {/* Render nodes */}
+                {nodes.map(node => {
+                    const isInMST = mstNodeIds.has(node.id);
+                    const isCurrent = currentNodeIds.includes(node.id);
+
+                    // Determine node styles
+                    const strokeColor = isInMST ? '#4CAF50' : isCurrent ? '#FF5722' : '#2196F3';
+                    const fillColor = isInMST
+                        ? 'rgb(159,209,163)'
+                        : isCurrent
+                            ? 'rgb(255,163,132)'
+                            : '#fff';
+
+                    return (
+                        <g key={node.id} transform={`translate(${node.x},${node.y})`}>
+                            <circle r="20" fill={fillColor} stroke={strokeColor} strokeWidth="3" />
+                            <text
+                                textAnchor="middle"
+                                dy=".3em"
+                                style={{ userSelect: 'none', fontWeight: 'bold' }}
+                            >
+                                {node.id}
+                            </text>
+                        </g>
+                    );
+                })}
             </svg>
         </div>
     );
