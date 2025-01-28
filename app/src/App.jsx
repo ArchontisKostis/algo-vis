@@ -31,18 +31,28 @@ export default function App() {
         const mst = [];
 
         for (const edge of sortedEdges) {
-            setCurrentEdge(edge);
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            setCurrentEdge(edge); // Highlight the current edge (orange)
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Delay for visualization
 
             if (uf.union(edge.from, edge.to)) {
+                // If added to MST, make it green
                 mst.push(edge);
                 setMstEdges([...mst]);
+            } else {
+                // If it forms a cycle, make it red temporarily
+                edge.color = 'red';
+                setEdges([...edges]);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Delay to show rejection
+                edge.color = 'gray'; // Reset to default
+                setEdges([...edges]);
             }
 
-            setCurrentEdge(null);
+            setCurrentEdge(null); // Reset current edge highlight
         }
+
         setIsRunning(false);
     };
+
 
     const toggleEditMode = () => {
         setIsEditing(!isEditing);
@@ -93,9 +103,10 @@ export default function App() {
             )}
 
             <div className="legend">
-                <div><span style={{ color: '#FF5722' }}>Orange</span> - Current Edge</div>
-                <div><span style={{ color: '#4CAF50' }}>Green</span> - MST Edge</div>
-                <div><span style={{ color: '#ddd' }}>Gray</span> - Unprocessed Edge</div>
+                <div><span style={{backgroundColor: '#FF5722'}}></span> Current Edge</div>
+                <div><span style={{backgroundColor: '#4CAF50'}}></span> MST Edge</div>
+                <div><span style={{backgroundColor: '#ddd'}}></span> Unprocessed Edge</div>
+                <div><span style={{backgroundColor: '#666'}}></span> Excluded Edge (forms cycle)</div>
                 {isEditing && (
                     <div className="edit-instructions">
                         Click canvas to add nodes | Click nodes to create edges

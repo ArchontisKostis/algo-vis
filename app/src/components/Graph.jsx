@@ -36,7 +36,6 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
                 width="100%"
                 height="100%"
             >
-                {/* Render edges */}
                 {edges.map(edge => {
                     const from = getNodePosition(edge.from);
                     const to = getNodePosition(edge.to);
@@ -50,7 +49,7 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
                                 y1={from.y}
                                 x2={to.x}
                                 y2={to.y}
-                                stroke={isInMST ? '#4CAF50' : isCurrent ? '#FF5722' : '#ddd'}
+                                stroke={isInMST ? '#4CAF50' : isCurrent ? '#FF5722' : edge.color || '#ddd'}
                                 strokeWidth={isCurrent ? 3 : 2}
                             />
                             <text
@@ -65,6 +64,7 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
                         </g>
                     );
                 })}
+
 
                 {/* Render nodes */}
                 {nodes.map(node => {

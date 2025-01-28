@@ -48,3 +48,10 @@ button:disabled {
   align-items: center;
   gap: 5px;
 }
+
+.legend div span {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
