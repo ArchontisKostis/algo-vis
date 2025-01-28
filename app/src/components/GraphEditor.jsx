@@ -192,14 +192,17 @@ const GraphEditor = ({ nodes, edges, onNodesChange, onEdgesChange }) => {
                 )}
 
                 <button onClick={saveGraphToFile}>Save Graph</button>
-                <input
-                    type="file"
-                    accept=".json"
-                    onChange={loadGraphFromFile}
-                    style={{ display: 'none' }}
-                    id="load-graph-input"
-                />
-                <label htmlFor="load-graph-input">Load Graph</label>
+
+                <div className="mb-3">
+                    <label htmlFor="load-graph-input">Load Graph</label>
+                    <input
+                        className="form-control"
+                        type="file"
+                        accept=".json"
+                        onChange={loadGraphFromFile}
+                        id="load-graph-input"
+                    />
+                </div>
             </div>
 
             <svg
