@@ -1,0 +1,68 @@
+.editor-container {
+    padding: 20px;
+    background: #f8f8f8;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.editor-controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 100;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.edge-creation {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.edge-creation input {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 80px;
+}
+
+.instructions {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.editor-canvas {
+    width: 100%;
+    height: 80vh;
+    min-height: 600px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.interactive-node:hover circle {
+    stroke-width: 3;
+    stroke: #FF5722;
+    cursor: pointer;
+}
+
+.edge-weight {
+    font-size: 14px;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+.active {
+    background: #4CAF50 !important;
+    color: white;
+}
