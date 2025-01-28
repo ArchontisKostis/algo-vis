@@ -4,7 +4,7 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
     const getNodePosition = (id) => nodes.find(node => node.id === id);
 
     const getViewBox = () => {
-        if (nodes.length === 0) return "0 0 800 400";
+        if (nodes.length === 0) return "0 0 900 200";
 
         const xs = nodes.map(node => node.x);
         const ys = nodes.map(node => node.y);
@@ -33,8 +33,8 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
             <svg
                 viewBox={getViewBox()}
                 preserveAspectRatio="xMidYMid meet"
-                width="100%"
-                height="100%"
+                width="90%"
+                height="90%"
             >
                 {edges.map(edge => {
                     const from = getNodePosition(edge.from);
