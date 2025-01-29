@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import {useState, useEffect, useRef, useCallback} from 'react';
 import Graph from './components/Graph';
 import GraphEditor from './components/GraphEditor';
 import { UnionFind } from './utils/algorithms';
@@ -14,6 +14,20 @@ export default function App() {
     const [isRunning, setIsRunning] = useState(false);
     const [currentEdge, setCurrentEdge] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
+
+    const isPausedRef = useRef(false);
+    const sortedEdgesRef = useRef([]);
+    const ufRef = useRef(null);
+    const currentStepRef = useRef(0);
+    const mstRef = useRef([]);
+    const mstSequenceTempRef = useRef([]);
+    const [isPaused, setIsPaused] = useState(false);
+
+
+    // Sync paused state with ref
+    useEffect(() => {
+        isPausedRef.current = isPaused;
+    }, [isPaused]);
 
     // Load default graph from assets folder
     useEffect(() => {
@@ -37,18 +51,57 @@ export default function App() {
         loadDefaultGraph();
     }, []); // This runs once when the component mounts
 
-    // Reset graph to initial state
+    const processNextEdge = useCallback(async () => {
+        if (currentStepRef.current >= sortedEdgesRef.current.length || isPausedRef.current) {
+            if (currentStepRef.current >= sortedEdgesRef.current.length) {
+                setIsRunning(false);
+                setMstSequence(mstSequenceTempRef.current);
+            }
+            return;
+        }
+
+        const edge = sortedEdgesRef.current[currentStepRef.current];
+        setCurrentEdge(edge);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        if (ufRef.current.union(edge.from, edge.to)) {
+            mstRef.current.push(edge);
+            mstSequenceTempRef.current.push(`(${edge.from},${edge.to})`);
+            setMstEdges([...mstRef.current]);
+        } else {
+            const updatedEdges = edges.map(e =>
+                e.id === edge.id ? { ...e, color: 'gray' } : e
+            );
+            setEdges(updatedEdges);
+        }
+
+        setCurrentEdge(null);
+        currentStepRef.current += 1;
+
+        if (!isPausedRef.current) {
+            processNextEdge();
+        }
+    }, [edges, setEdges, setMstEdges, setMstSequence]);
+
+
+    // Modified reset function
     const resetGraph = () => {
-        const resetEdges = edges.map(edge => ({
-            ...edge,
-            color: '#ddd' // Reset edge color to default
-        }));
-        setEdges(resetEdges);
+        // Reset state
+        setEdges(edges.map(edge => ({ ...edge, color: '#ddd' })));
         setMstEdges([]);
         setMstSequence([]);
         setCurrentEdge(null);
         setIsRunning(false);
+        setIsPaused(false);
+
+        // Reset algorithm state
+        sortedEdgesRef.current = [];
+        ufRef.current = null;
+        currentStepRef.current = 0;
+        mstRef.current = [];
+        mstSequenceTempRef.current = [];
     };
+
 
     // For loading JSON graph data
     const handleFileUpload = (event) => {
@@ -86,35 +139,39 @@ export default function App() {
         setCurrentEdge(null);
     };
 
-    const startKruskal = async () => {
-        if (!nodes.length) return;
+    const startKruskal = useCallback(() => {
+        if (!nodes.length || isRunning) return;
 
+        // Initialize algorithm state
         setIsRunning(true);
-        const sortedEdges = [...edges].sort((a, b) => a.weight - b.weight);
-        const uf = new UnionFind(nodes.length);
-        const mst = [];
-        const mstSequenceTemp = []; // Temporary array to store the sequence of edges in MST
+        setIsPaused(false);
+        sortedEdgesRef.current = [...edges].sort((a, b) => a.weight - b.weight);
+        ufRef.current = new UnionFind(nodes.length);
+        currentStepRef.current = 0;
+        mstRef.current = [];
+        mstSequenceTempRef.current = [];
 
-        for (const edge of sortedEdges) {
-            setCurrentEdge(edge); // Highlight the current edge (orange)
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Delay for visualization
+        // Reset visual state
+        setMstEdges([]);
+        setMstSequence([]);
+        setCurrentEdge(null);
+        setEdges(edges.map(edge => ({ ...edge, color: '#ddd' })));
 
-            if (uf.union(edge.from, edge.to)) {
-                // If added to MST, make it green
-                mst.push(edge);
-                mstSequenceTemp.push(`(${edge.from},${edge.to})`); // Save the edge in sequence
-                setMstEdges([...mst]);
-            } else {
-                edge.color = 'gray';
-                setEdges([...edges]);
-            }
+        // Start processing
+        processNextEdge();
+    }, [nodes, edges, isRunning, processNextEdge]);
 
-            setCurrentEdge(null); // Reset current edge highlight
+    const handlePauseResume = () => {
+        if (isPausedRef.current) {
+            setIsPaused(false);
+            isPausedRef.current = false;  // Ensure the ref is updated
+            processNextEdge();  // Explicitly call it to resume
+        } else {
+            setIsPaused(true);
+            isPausedRef.current = true;
         }
-
-        setIsRunning(false);
-        setMstSequence(mstSequenceTemp); // Save the sequence of edges added to MST
     };
+
 
     const toggleEditMode = () => {
         setIsEditing(!isEditing);
@@ -125,6 +182,18 @@ export default function App() {
             setNodes([]);
             setEdges([]);
         }
+    };
+
+    const handleStop = () => {
+        setIsRunning(false);
+        setIsPaused(false);
+        isPausedRef.current = false;
+        currentStepRef.current = sortedEdgesRef.current.length; // Prevents further execution
+        setMstEdges([]);
+        setMstSequence([]);
+        setCurrentEdge(null);
+
+        resetGraph();
     };
 
     return (
@@ -177,6 +246,33 @@ export default function App() {
                                 <i className="bi bi-play-circle"></i>
                             )}
                         </button>
+
+                        <button
+                            onClick={handlePauseResume}
+                            disabled={!isRunning}
+                            className="btn btn-warning"
+                            title={isPaused ? 'Resume' : 'Pause'}
+                        >
+                            {isPaused ? (
+                                <>
+                                    <i className="bi bi-play-circle"></i>
+                                </>
+                            ) : (
+                                <>
+                                    <i className="bi bi-pause-circle"></i>
+                                </>
+                            )}
+                        </button>
+
+                        <button
+                            onClick={handleStop}
+                            disabled={!isRunning}
+                            className="btn btn-danger"
+                            title="Stop"
+                        >
+                            <i className="bi bi-stop-circle"></i>
+                        </button>
+
                     </>
                 )}
 
