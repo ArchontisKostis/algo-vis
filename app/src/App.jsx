@@ -151,12 +151,6 @@ export default function App() {
         mstRef.current = [];
         mstSequenceTempRef.current = [];
 
-        // Reset visual state
-        setMstEdges([]);
-        setMstSequence([]);
-        setCurrentEdge(null);
-        setEdges(edges.map(edge => ({ ...edge, color: '#ddd' })));
-
         // Start processing
         processNextEdge();
     }, [nodes, edges, isRunning, processNextEdge]);
