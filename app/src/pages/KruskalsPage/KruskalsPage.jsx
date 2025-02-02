@@ -1,241 +1,153 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Graph from '../../components/Graph/Graph.jsx';
 import GraphEditor from '../../components/GraphEditor/GraphEditor.jsx';
-import { UnionFind } from '../../utils/algorithms';
+import { initializeKruskal, processNextEdge } from '../../utils/kruskal';
 import { generateNodes, generateEdges } from '../../utils/graphGenerators';
-import { BallTriangle, Bars } from 'react-loader-spinner';
 import ControlsComponent from "../../components/ControlsComponent/ControlsComponent.jsx";
 import Legend from "../../components/Legend/Legend.jsx";
 import HelpModal from "../../components/HelpModal/HelpModal.jsx";
 
 const KRUSKAL_LEGEND_DATA = [
-    {
-        color: '#FF5722',
-        label: 'Current Edge'
-    },
-    {
-        color: '#4CAF50',
-        label: 'MST Edge'
-    },
-    {
-        color: '#ddd',
-        label: 'Unprocessed Edge'
-    },
-    {
-        color: '#666',
-        label: 'Excluded Edge (forms cycle)'
-    }
+    { color: '#FF5722', label: 'Current Edge' },
+    { color: '#4CAF50', label: 'MST Edge' },
+    { color: '#ddd', label: 'Unprocessed Edge' },
+    { color: '#666', label: 'Excluded Edge (forms cycle)' }
 ];
 
 export default function KruskalsPage() {
-    const [nodes, setNodes] = useState([]);
-    const [edges, setEdges] = useState([]);
-    const [mstEdges, setMstEdges] = useState([]);
-    const [mstSequence, setMstSequence] = useState([]); // To store the sequence of edges in MST
+    const [graphState, setGraphState] = useState({
+        nodes: [],
+        edges: [],
+        mstEdges: [],
+        mstSequence: [],
+        isRunning: false,
+        currentEdge: null,
+        isPaused: false,
+        isEditing: false,
+        currentStep: 0
+    });
+
     const [stepDelay, setStepDelay] = useState(1500);
-    const [isRunning, setIsRunning] = useState(false);
-    const [currentEdge, setCurrentEdge] = useState(null);
-    const [isEditing, setIsEditing] = useState(false);
-
     const isPausedRef = useRef(false);
-    const sortedEdgesRef = useRef([]);
-    const ufRef = useRef(null);
-    const currentStepRef = useRef(0);
-    const mstRef = useRef([]);
-    const mstSequenceTempRef = useRef([]);
-    const [isPaused, setIsPaused] = useState(false);
+    const kruskalStateRef = useRef(null);
 
-    // Sync paused state with ref
     useEffect(() => {
-        isPausedRef.current = isPaused;
-    }, [isPaused]);
+        isPausedRef.current = graphState.isPaused;
+    }, [graphState.isPaused]);
 
-    // Load default graph from assets folder
     useEffect(() => {
         const loadDefaultGraph = async () => {
             try {
                 const response = await fetch('./example_graph_1.json');
-                if (!response.ok) {
-                    throw new Error('Failed to load default graph');
-                }
+                if (!response.ok) throw new Error('Failed to load default graph');
                 const data = await response.json();
-                setNodes(data.nodes);
-                setEdges(data.edges);
-                setMstEdges([]);
-                setMstSequence([]); // Reset sequence when new file is loaded
-                setCurrentEdge(null);
+                setGraphState(prev => ({ ...prev, nodes: data.nodes, edges: data.edges, mstEdges: [], mstSequence: [], currentEdge: null }));
             } catch (error) {
                 console.error('Error loading default graph:', error);
             }
         };
 
         loadDefaultGraph();
-    }, []); // This runs once when the component mounts
+    }, []);
 
-    const processNextEdge = useCallback(async () => {
-        if (currentStepRef.current >= sortedEdgesRef.current.length || isPausedRef.current) {
-            if (currentStepRef.current >= sortedEdgesRef.current.length) {
-                setIsRunning(false);
-                setMstSequence(mstSequenceTempRef.current);
-            }
-            return;
-        }
-
-        const edge = sortedEdgesRef.current[currentStepRef.current];
-        setCurrentEdge(edge);
-        await new Promise(resolve => setTimeout(resolve, stepDelay));
-
-        if (ufRef.current.union(edge.from, edge.to)) {
-            mstRef.current.push(edge);
-            mstSequenceTempRef.current.push(`(${edge.from},${edge.to})`);
-            setMstEdges([...mstRef.current]);
-        } else {
-            setEdges(prevEdges =>
-                prevEdges.map(e =>
-                    e.id === edge.id ? { ...e, color: 'gray' } : e
-                )
-            );
-        }
-
-        setCurrentEdge(null);
-        currentStepRef.current += 1;
-
-        if (!isPausedRef.current) {
-            processNextEdge();
-        }
-    }, [edges, setEdges, setMstEdges, setMstSequence]);
-
-    // Modified reset function
     const resetGraph = () => {
-        // Reset state
-        setEdges(edges.map(edge => ({ ...edge, color: '#ddd' })));
-        setMstEdges([]);
-        setMstSequence([]);
-        setCurrentEdge(null);
-        setIsRunning(false);
-        setIsPaused(false);
+        setGraphState(prev => ({
+            ...prev,
+            edges: prev.edges.map(edge => ({ ...edge, color: '#ddd' })),
+            mstEdges: [],
+            mstSequence: [],
+            currentEdge: null,
+            isRunning: false,
+            isPaused: false,
+            currentStep: 0
+        }));
 
-        // Reset algorithm state
-        sortedEdgesRef.current = [];
-        ufRef.current = null;
-        currentStepRef.current = 0;
-        mstRef.current = [];
-        mstSequenceTempRef.current = [];
+        kruskalStateRef.current = null;
     };
 
     const generateGraph = () => {
         const newNodes = generateNodes(7);
         const newEdges = generateEdges(newNodes, 8);
-        setNodes(newNodes);
-        setEdges(newEdges);
-        setMstEdges([]);
-        setMstSequence([]); // Reset sequence when new graph is generated
-        setCurrentEdge(null);
+        setGraphState({ nodes: newNodes, edges: newEdges, mstEdges: [], mstSequence: [], currentEdge: null, isRunning: false, isPaused: false, isEditing: false, currentStep: 0 });
     };
 
     const startKruskal = useCallback(() => {
-        if (!nodes.length || isRunning) return;
+        if (!graphState.nodes.length || graphState.isRunning) return;
 
-        // Initialize algorithm state
-        setIsRunning(true);
-        setIsPaused(false);
-        sortedEdgesRef.current = [...edges].sort((a, b) => a.weight - b.weight);
-        ufRef.current = new UnionFind(nodes.length);
-        currentStepRef.current = 0;
-        mstRef.current = [];
-        mstSequenceTempRef.current = [];
+        kruskalStateRef.current = initializeKruskal(graphState.nodes, graphState.edges);
+        setGraphState(prev => ({ ...prev, isRunning: true, isPaused: false, currentStep: 0 }));
 
-        // Start processing
-        processNextEdge();
-    }, [nodes, edges, isRunning, processNextEdge]);
+        processNextEdge(kruskalStateRef.current, setGraphState, isPausedRef, stepDelay);
+    }, [graphState.nodes, graphState.edges, graphState.isRunning, stepDelay]);
 
     const handlePauseResume = () => {
-        if (isPausedRef.current) {
-            setIsPaused(false);
-            isPausedRef.current = false;  // Ensure the ref is updated
-            processNextEdge();  // Explicitly call it to resume
-        } else {
-            setIsPaused(true);
-            isPausedRef.current = true;
+        setGraphState(prev => ({ ...prev, isPaused: !prev.isPaused }));
+        isPausedRef.current = !isPausedRef.current;
+
+        if (!isPausedRef.current) {
+            processNextEdge(kruskalStateRef.current, setGraphState, isPausedRef, stepDelay);
         }
     };
 
     const toggleEditMode = () => {
-        setIsEditing(!isEditing);
-        setMstEdges([]);
-        setMstSequence([]); // Reset MST sequence
-        setCurrentEdge(null);
-        if (!isEditing) {
-            setNodes([]);
-            setEdges([]);
+        setGraphState(prev => ({ ...prev, isEditing: !prev.isEditing, mstEdges: [], mstSequence: [], currentEdge: null }));
+
+        if (!graphState.isEditing) {
+            setGraphState(prev => ({ ...prev, nodes: [], edges: [] }));
         }
     };
 
     const handleStop = () => {
-        setIsRunning(false);
-        setIsPaused(false);
-        isPausedRef.current = false;
-        currentStepRef.current = sortedEdgesRef.current.length; // Prevents further execution
-        setMstEdges([]);
-        setMstSequence([]);
-        setCurrentEdge(null);
+        setGraphState(prev => ({
+            ...prev,
+            isRunning: false,
+            isPaused: false,
+            mstEdges: [],
+            mstSequence: [],
+            currentEdge: null,
+            currentStep: kruskalStateRef.current?.sortedEdges.length || 0
+        }));
 
-        // Reset algorithm state
-        resetGraph()
+        resetGraph();
     };
 
     return (
         <>
             <HelpModal/>
-
-            <h1 style={{fontSize: "1.5em", textAlign: "center"}}>
-                Kruskal's Algorithm Visualization
-            </h1>
-
+            <h1 style={{ fontSize: "1.5em", textAlign: "center" }}>Kruskal's Algorithm Visualization</h1>
             <br/>
 
             <ControlsComponent
-                isEditing={isEditing}
+                isEditing={graphState.isEditing}
                 toggleEditMode={toggleEditMode}
                 generateGraph={generateGraph}
                 resetGraph={resetGraph}
-                nodes={nodes}
-                isRunning={isRunning}
+                nodes={graphState.nodes}
+                isRunning={graphState.isRunning}
                 startKruskal={startKruskal}
-                isPaused={isPaused}
+                isPaused={graphState.isPaused}
                 handlePauseResume={handlePauseResume}
                 handleStop={handleStop}
                 stepDelay={stepDelay}
                 setStepDelay={setStepDelay}
             />
 
-            {isEditing ? (
-                <GraphEditor
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={setNodes}
-                    onEdgesChange={setEdges}
-                />
+            {graphState.isEditing ? (
+                <GraphEditor nodes={graphState.nodes} edges={graphState.edges} onNodesChange={nodes => setGraphState(prev => ({ ...prev, nodes }))} onEdgesChange={edges => setGraphState(prev => ({ ...prev, edges }))} />
             ) : (
                 <>
-                    <Graph
-                        nodes={nodes}
-                        edges={edges}
-                        highlightedEdges={mstEdges}
-                        currentEdge={currentEdge}
-                    />
-
-                    <Legend data={KRUSKAL_LEGEND_DATA}/>
+                    <Graph nodes={graphState.nodes} edges={graphState.edges} highlightedEdges={graphState.mstEdges} currentEdge={graphState.currentEdge} />
+                    <Legend data={KRUSKAL_LEGEND_DATA} />
                 </>
             )}
 
             <br/>
 
-            {mstSequence.length > 0 && (
+            {!graphState.isEditing && graphState.mstSequence.length > 0 && (
                 <div className="mst-sequence">
                     <h5><strong>Edge Addition Sequence:</strong></h5>
                     <ol className="list-group list-group-numbered">
-                        {mstSequence.map((edge, index) => (
+                        {graphState.mstSequence.map((edge, index) => (
                             <li className="list-group-item" key={index}>{edge}</li>
                         ))}
                     </ol>
