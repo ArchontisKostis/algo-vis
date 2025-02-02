@@ -1,6 +1,8 @@
 import React from 'react';
+import Edge from "./Edge.jsx";
+import Node from "./Node.jsx";
 
-const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
+const Graph = ({ nodes, edges, highlightedEdges, currentEdge }) => {
     const getNodePosition = (id) => nodes.find(node => node.id === id);
 
     const getViewBox = () => {
@@ -18,14 +20,7 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
         return `${minX} ${minY} ${width} ${height}`;
     };
 
-    // Get all node IDs included in the MST
-    const mstNodeIds = new Set();
-    mstEdges.forEach(edge => {
-        mstNodeIds.add(edge.from);
-        mstNodeIds.add(edge.to);
-    });
-
-    // Get the IDs of nodes connected by the current edge
+    const highlightedNodeIds = new Set(highlightedEdges.flatMap(edge => [edge.from, edge.to]));
     const currentNodeIds = currentEdge ? [currentEdge.from, currentEdge.to] : [];
 
     return (
@@ -36,62 +31,28 @@ const Graph = ({ nodes, edges, mstEdges, currentEdge }) => {
                 width="90%"
                 height="90%"
             >
-                {edges.map(edge => {
-                    const from = getNodePosition(edge.from);
-                    const to = getNodePosition(edge.to);
-                    const isInMST = mstEdges.some(e => e.id === edge.id);
-                    const isCurrent = currentEdge?.id === edge.id;
+                {edges.map(edge => (
+                    <Edge
+                        key={edge.id}
+                        from={getNodePosition(edge.from)}
+                        to={getNodePosition(edge.to)}
+                        isHighlighted={highlightedEdges.some(e => e.id === edge.id)}
+                        isCurrent={currentEdge?.id === edge.id}
+                        color={edge.color}
+                        weight={edge.weight}
+                    />
+                ))}
 
-                    return (
-                        <g key={edge.id}>
-                            <line
-                                x1={from.x}
-                                y1={from.y}
-                                x2={to.x}
-                                y2={to.y}
-                                stroke={isInMST ? '#4CAF50' : isCurrent ? '#FF5722' : edge.color || '#ddd'}
-                                strokeWidth={isCurrent ? 3 : 2}
-                            />
-                            <text
-                                x={(from.x + to.x) / 2}
-                                y={(from.y + to.y) / 2}
-                                textAnchor="middle"
-                                fill={isInMST ? '#4CAF50' : '#666'}
-                                style={{ pointerEvents: 'none' }}
-                            >
-                                {edge.weight}
-                            </text>
-                        </g>
-                    );
-                })}
-
-
-                {/* Render nodes */}
-                {nodes.map(node => {
-                    const isInMST = mstNodeIds.has(node.id);
-                    const isCurrent = currentNodeIds.includes(node.id);
-
-                    // Determine node styles
-                    const strokeColor = isInMST ? '#4CAF50' : isCurrent ? '#FF5722' : '#2196F3';
-                    const fillColor = isInMST
-                        ? 'rgb(159,209,163)'
-                        : isCurrent
-                            ? 'rgb(255,163,132)'
-                            : '#fff';
-
-                    return (
-                        <g key={node.id} transform={`translate(${node.x},${node.y})`}>
-                            <circle r="20" fill={fillColor} stroke={strokeColor} strokeWidth="3" />
-                            <text
-                                textAnchor="middle"
-                                dy=".3em"
-                                style={{ userSelect: 'none', fontWeight: 'bold' }}
-                            >
-                                {node.id}
-                            </text>
-                        </g>
-                    );
-                })}
+                {nodes.map(node => (
+                    <Node
+                        key={node.id}
+                        id={node.id}
+                        x={node.x}
+                        y={node.y}
+                        isHighlighted={highlightedNodeIds.has(node.id)}
+                        isCurrent={currentNodeIds.includes(node.id)}
+                    />
+                ))}
             </svg>
         </div>
     );
