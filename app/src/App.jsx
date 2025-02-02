@@ -69,10 +69,11 @@ export default function App() {
             mstSequenceTempRef.current.push(`(${edge.from},${edge.to})`);
             setMstEdges([...mstRef.current]);
         } else {
-            const updatedEdges = edges.map(e =>
-                e.id === edge.id ? { ...e, color: 'gray' } : e
+            setEdges(prevEdges =>
+                prevEdges.map(e =>
+                    e.id === edge.id ? { ...e, color: 'gray' } : e
+                )
             );
-            setEdges(updatedEdges);
         }
 
         setCurrentEdge(null);
@@ -82,6 +83,7 @@ export default function App() {
             processNextEdge();
         }
     }, [edges, setEdges, setMstEdges, setMstSequence]);
+
 
 
     // Modified reset function
@@ -187,7 +189,8 @@ export default function App() {
         setMstSequence([]);
         setCurrentEdge(null);
 
-        resetGraph();
+        // Reset algorithm state
+        resetGraph()
     };
 
     return (
