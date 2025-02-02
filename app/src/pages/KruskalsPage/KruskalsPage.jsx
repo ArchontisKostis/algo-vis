@@ -221,7 +221,7 @@ export default function KruskalsPage() {
                     <Graph
                         nodes={nodes}
                         edges={edges}
-                        mstEdges={mstEdges}
+                        highlightedEdges={mstEdges}
                         currentEdge={currentEdge}
                     />
 
